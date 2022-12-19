@@ -1,9 +1,9 @@
 # Processamento Assíncrono com Spring Batch
 
-Esse projeto foi elaborado [nesse vídeo]() que explica como otimizar um job para ter ganhos de até % de performance.
+Esse projeto foi elaborado [nesse vídeo]() que explica como otimizar um job para ter ganhos de até 90% de performance.
 
 - Tempo antes: 2m30s301ms
-- Tepo depois: 
+- Tempo depois: 18s238ms (88% de redução!)
 
 ## Roteiro
 

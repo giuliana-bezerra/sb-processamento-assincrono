@@ -1,10 +1,14 @@
 package br.com.giulianabezerra.sbprocessamentoassincrono;
 
+import java.util.concurrent.Future;
+
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.integration.async.AsyncItemProcessor;
+import org.springframework.batch.integration.async.AsyncItemWriter;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
@@ -13,6 +17,7 @@ import org.springframework.batch.item.file.transform.FieldSet;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.web.client.RestTemplate;
 
@@ -36,10 +41,10 @@ public class BatchConfig {
   }
 
   @Bean
-  public Step importarClienteStep(ItemReader<Pessoa> reader, ItemProcessor<Pessoa, Pessoa> processor,
-      ItemWriter<Pessoa> writer) {
+  public Step importarClienteStep(ItemReader<Pessoa> reader, ItemProcessor<Pessoa, Future<Pessoa>> processor,
+      ItemWriter<Future<Pessoa>> writer) {
     return new StepBuilder("importarClienteStep", jobRepository)
-        .<Pessoa, Pessoa>chunk(1000, transactionManager)
+        .<Pessoa, Future<Pessoa>>chunk(1000, transactionManager)
         .reader(reader)
         .processor(processor)
         .writer(writer)
@@ -63,6 +68,15 @@ public class BatchConfig {
   }
 
   @Bean
+  public ItemProcessor<Pessoa, Future<Pessoa>> asyncProcessor(ItemProcessor<Pessoa, Pessoa> itemProcessor,
+      TaskExecutor taskExecutor) {
+    var asyncProcessor = new AsyncItemProcessor<Pessoa, Pessoa>();
+    asyncProcessor.setTaskExecutor(taskExecutor);
+    asyncProcessor.setDelegate(itemProcessor);
+    return asyncProcessor;
+  }
+
+  @Bean
   public ItemProcessor<Pessoa, Pessoa> processor() {
     return pessoa -> {
       var uri = "https://jsonplaceholder.typicode.com/photos/" + pessoa.id();
@@ -71,6 +85,13 @@ public class BatchConfig {
           photo.thumbnailUrl());
       return newPessoa;
     };
+  }
+
+  @Bean
+  public ItemWriter<Future<Pessoa>> asyncWriter(ItemWriter<Pessoa> writer) {
+    var asyncWriter = new AsyncItemWriter<Pessoa>();
+    asyncWriter.setDelegate(writer);
+    return asyncWriter;
   }
 
   @Bean
